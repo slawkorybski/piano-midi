@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Wizualizacja MIDI - Perfekcyjna Odległość</title>
+    <title>Wizualizacja MIDI - Fix</title>
     <script src="vexflow-min.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
@@ -50,53 +50,34 @@
         setNotes("C");
 
         const div = document.getElementById("output");
-        // Wysokość zmniejszona do 210px, aby zlikwidować pustą przestrzeń na dole okna
         const renderer = new Renderer(div, Renderer.Backends.SVG).resize(520, 210);
         const ctx = renderer.getContext();
 
         function draw() {
             ctx.clear();
-            
-            // OSTATECZNA POPRAWKA: Klucz wiolinowy na Y=10, basowy podciągnięty aż na Y=70.
-            // Przestrzeń została zaciśnięta do podręcznikowego maksimum.
             const tStave = new Stave(10, 10, 480).addClef("treble").addKeySignature(currentKey).setContext(ctx).draw();
             const bStave = new Stave(10, 70, 480).addClef("bass").addKeySignature(currentKey).setContext(ctx).draw();
-            
             let tN = [], bN = [];
-            
             Array.from(activeNotes).sort((a,b)=>a-b).forEach(id => {
-                if (noteMap[id]) { 
-                    if (id >= 60) tN.push(noteMap[id]); else bN.push(noteMap[id]);
-                }
+                if (noteMap[id]) { if (id >= 60) tN.push(noteMap[id]); else bN.push(noteMap[id]); }
             });
-
             const formatter = new Formatter();
             let tVoice = null, bVoice = null;
-
             if (tN.length > 0) {
                 const sn = new StaveNote({ clef: "treble", keys: tN.map(n => n.key), duration: "w" });
-                tN.forEach((n, i) => { 
-                    if(n.sharp) sn.addModifier(i, new Accidental("#")); 
-                    if(n.flat) sn.addModifier(i, new Accidental("b")); 
-                });
+                tN.forEach((n, i) => { if(n.sharp) sn.addModifier(i, new Accidental("#")); if(n.flat) sn.addModifier(i, new Accidental("b")); });
                 tVoice = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([sn]);
                 formatter.joinVoices([tVoice]);
             }
-            
             if (bN.length > 0) {
                 const sn = new StaveNote({ clef: "bass", keys: bN.map(n => n.key), duration: "w" });
-                bN.forEach((n, i) => { 
-                    if(n.sharp) sn.addModifier(i, new Accidental("#")); 
-                    if(n.flat) sn.addModifier(i, new Accidental("b")); 
-                });
+                bN.forEach((n, i) => { if(n.sharp) sn.addModifier(i, new Accidental("#")); if(n.flat) sn.addModifier(i, new Accidental("b")); });
                 bVoice = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([sn]);
                 formatter.joinVoices([bVoice]);
             }
-
             let voicesToFormat = [];
             if (tVoice) voicesToFormat.push(tVoice);
             if (bVoice) voicesToFormat.push(bVoice);
-
             if (voicesToFormat.length > 0) {
                 formatter.format(voicesToFormat, 320);
                 if (tVoice) tVoice.draw(ctx, tStave);
@@ -115,11 +96,13 @@
             const bar = document.getElementById("midi-status-bar");
             const inputs = Array.from(access.inputs.values());
             if (inputs.length > 0) {
-                let devName = inputs.name || "Urządzenie MIDI";
+                // NAPRAWIONE: Wyciąganie nazwy pierwszego urządzenia z tablicy
+                let devName = inputs[0].name || "Urządzenie MIDI";
                 bar.innerText = `🟢 Połączono z: ${devName}`; bar.className = "midi-connected";
                 bar.onclick = null;
                 inputs.forEach(input => input.onmidimessage = (msg) => {
-                    let cmd = msg.data, note = msg.data, vel = msg.data;
+                    // NAPRAWIONE: Bezpieczne, jawne indeksowanie tablicy MIDI data
+                    let cmd = msg.data[0], note = msg.data[1], vel = msg.data[2];
                     if (cmd >= 144 && cmd <= 159 && vel > 0) { activeNotes.add(note); draw(); }
                     else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { activeNotes.delete(note); draw(); }
                 });
