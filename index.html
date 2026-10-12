@@ -10,7 +10,7 @@
         select { padding: 8px; font-size: 15px; border-radius: 5px; }
         #output { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .legend { margin: 10px 0; background: #e8ecef; padding: 10px; font-size: 13px; border-radius: 5px; text-align: left; }
-        #midi-status-bar { margin-top: auto; width: 100%; max-width: 500px; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; cursor: pointer; border: 2px solid #f39c12; background: #ffeaa7; color: #d35400; }
+        #midi-status-bar { margin-top: auto; width: 100%; max-width: 500px; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; cursor: pointer; border: 2px solid #f39c12; background: #ffeaa7; color: #d35400; box-sizing: border-box; }
         .midi-connected { background: #d4edda !important; color: #155724 !important; border-color: #28a745 !important; }
         .midi-disconnected { background: #ffdde1 !important; color: #c0392b !important; border-color: #e74c3c !important; }
     </style>
@@ -36,14 +36,12 @@
         let activeNotes = new Set(), noteMap = {}, currentKey = "C", gAccess = null;
         const keyMap = { 'z':48,'x':50,'c':52,'v':53,'b':55,'n':57,'m':59,'a':60,'w':61,'s':62,'e':63,'d':64,'f':65,'t':66,'g':67,'y':68,'h':69,'u':70,'j':71,'k':72 };
         
-        // Automatyczne generowanie reguł dla czarnych klawiszy na podstawie teorii muzyki
         function setNotes(key) {
             noteMap = {};
-            const sharps = ["G","D","A","E","B","F#"], flats = ["F","Bb","Eb","Ab","Db","Gb"];
-            const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+            const flats = ["F","Bb","Eb","Ab","Db","Gb"];
+            let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
             if (flats.includes(key)) {
-                names[1]="Db"; names[3]="Eb"; names[8]="Ab"; names[10]="Bb";
-                if(key==="Db"||key==="Gb") names[6]="Gb";
+                names = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
             }
             for (let i = 21; i <= 108; i++) {
                 let name = names[i % 12], oct = Math.floor(i / 12) - 1;
@@ -89,7 +87,8 @@
             const bar = document.getElementById("midi-status-bar");
             const inputs = Array.from(access.inputs.values());
             if (inputs.length > 0) {
-                bar.innerText = `🟢 Połączono: ${inputs[0].name}`; bar.className = "midi-connected";
+                let devName = inputs[0].name || "Urządzenie MIDI";
+                bar.innerText = `🟢 Połączono: ${devName}`; bar.className = "midi-connected";
                 inputs.forEach(input => input.onmidimessage = (msg) => {
                     let cmd = msg.data[0], note = msg.data[1], vel = msg.data[2];
                     if (cmd >= 144 && cmd <= 159 && vel > 0) { activeNotes.add(note); draw(); }
@@ -101,7 +100,8 @@
         function connectMIDI() {
             if (navigator.requestMIDIAccess) {
                 navigator.requestMIDIAccess().then(access => {
-                    gAccess = access; updateBar(access); bar.removeAttribute('onclick');
+                    gAccess = access; updateBar(access); 
+                    document.getElementById("midi-status-bar").removeAttribute('onclick');
                     access.onstatechange = () => updateBar(gAccess);
                 }).catch(() => { document.getElementById("midi-status-bar").innerText = "🔴 Brak uprawnień."; });
             }
