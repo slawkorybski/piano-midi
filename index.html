@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Wizualizacja MIDI</title>
+    <!-- Ładowanie pliku, który przed chwilą zapisałeś na dysku -->
+    <script src="vexflow-min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; text-align: center; }
+        #start-btn { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #output { margin-top: 20px; background: white; padding: 20px; border-radius: 10px; display: inline-block; }
+        .legend { margin-top: 20px; background: #e8ecef; padding: 15px; display: inline-block; text-align: left; }
+    </style>
+</head>
+<body>
+    <h1>Wizualizacja MIDI & Symulator</h1>
+    <button id="start-btn">Uruchom system MIDI</button>
+    <br><div id="output"></div><br>
+    <div class="legend">
+        <strong>Klawisze komputera:</strong><br>
+        Klucz Basowy: <code>Z</code> <code>X</code> <code>C</code> <code>V</code> <code>B</code> <code>N</code> <code>M</code><br>
+        Klucz Wiolinowy: <code>A</code> <code>S</code> <code>D</code> <code>F</code> <code>G</code> <code>H</code> <code>J</code> <code>K</code> <code>L</code>
+    </div>
+    <script>
+        const { Renderer, Stave, StaveNote, Voice, Formatter } = Vex.Flow;
+        let activeNotes = new Set();
+        const keyMap = { 'z':48,'x':50,'c':52,'v':53,'b':55,'n':57,'m':59,'a':60,'s':62,'d':64,'f':65,'g':67,'h':69,'j':71,'k':72,'l':74 };
+        const noteMap = { 48:["C/3"],50:["D/3"],52:["E/3"],53:["F/3"],55:["G/3"],57:["A/3"],59:["B/3"],60:["C/4"],62:["D/4"],64:["E/4"],65:["F/4"],67:["G/4"],69:["A/4"],71:["B/4"],72:["C/5"],74:["D/5"] };
+        const div = document.getElementById("output");
+        const renderer = new Renderer(div, Renderer.Backends.SVG).resize(500, 280);
+        const context = renderer.getContext();
+
+        function draw() {
+            context.clear();
+            const tStave = new Stave(20, 10, 400).addClef("treble").setContext(context).draw();
+            const bStave = new Stave(20, 130, 400).addClef("bass").setContext(context).draw();
+            let tNotes = [], bNotes = [];
+            Array.from(activeNotes).sort((a,b)=>a-b).forEach(id => {
+                if (noteMap[id]) {
+                    if (id >= 60) tNotes.push(noteMap[id][0]); else bNotes.push(noteMap[id][0]);
+                }
+            });
+            if (tNotes.length > 0) {
+                const v = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([new StaveNote({ clef:"treble", keys:tNotes, duration:"w" })]);
+                new Formatter().joinVoices([v]).format([v], 350); v.draw(context, tStave);
+            }
+            if (bNotes.length > 0) {
+                const v = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([new StaveNote({ clef:"bass", keys:bNotes, duration:"w" })]);
+                new Formatter().joinVoices([v]).format([v], 350); v.draw(context, bStave);
+            }
+        }
+        draw();
+        window.addEventListener('keydown', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]&&!activeNotes.has(keyMap[k])){ activeNotes.add(keyMap[k]); draw(); } });
+        window.addEventListener('keyup', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]){ activeNotes.delete(keyMap[k]); draw(); } });
+        document.getElementById("start-btn").addEventListener("click", () => {
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess().then(access => {
+                    for (let input of access.inputs.values()) {
+                        input.onmidimessage = (msg) => {
+                            const cmd=msg.data[0], note=msg.data[1], vel=msg.data[2];
+                            if(cmd===144&&vel>0){ activeNotes.add(note); draw(); }
+                            else if(cmd===128||(cmd===144&&vel===0)){ activeNotes.delete(note); draw(); }
+                        };
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
