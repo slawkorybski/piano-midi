@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Wizualizacja MIDI - Fix</title>
+    <title>Wizualizacja MIDI</title>
     <script src="vexflow-min.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
@@ -50,17 +50,23 @@
         setNotes("C");
 
         const div = document.getElementById("output");
-        const renderer = new Renderer(div, Renderer.Backends.SVG).resize(520, 210);
+        // Okno powiększone w pionie do 350px, aby zmieścić linie pomocnicze skrajnych nut
+        const renderer = new Renderer(div, Renderer.Backends.SVG).resize(520, 350);
         const ctx = renderer.getContext();
 
         function draw() {
             ctx.clear();
-            const tStave = new Stave(10, 10, 480).addClef("treble").addKeySignature(currentKey).setContext(ctx).draw();
-            const bStave = new Stave(10, 70, 480).addClef("bass").addKeySignature(currentKey).setContext(ctx).draw();
+            
+            // PRZYWRÓCONE PARAMETRY: Wiolin na Y=75, Bas na Y=135.
+            // Odstęp między nimi wynosi dokładnie 60 pikseli - czyli tak jak wtedy, gdy było dobrze!
+            const tStave = new Stave(10, 75, 480).addClef("treble").addKeySignature(currentKey).setContext(ctx).draw();
+            const bStave = new Stave(10, 135, 480).addClef("bass").addKeySignature(currentKey).setContext(ctx).draw();
+            
             let tN = [], bN = [];
             Array.from(activeNotes).sort((a,b)=>a-b).forEach(id => {
                 if (noteMap[id]) { if (id >= 60) tN.push(noteMap[id]); else bN.push(noteMap[id]); }
             });
+            
             const formatter = new Formatter();
             let tVoice = null, bVoice = null;
             if (tN.length > 0) {
@@ -96,12 +102,10 @@
             const bar = document.getElementById("midi-status-bar");
             const inputs = Array.from(access.inputs.values());
             if (inputs.length > 0) {
-                // NAPRAWIONE: Wyciąganie nazwy pierwszego urządzenia z tablicy
                 let devName = inputs[0].name || "Urządzenie MIDI";
                 bar.innerText = `🟢 Połączono z: ${devName}`; bar.className = "midi-connected";
                 bar.onclick = null;
                 inputs.forEach(input => input.onmidimessage = (msg) => {
-                    // NAPRAWIONE: Bezpieczne, jawne indeksowanie tablicy MIDI data
                     let cmd = msg.data[0], note = msg.data[1], vel = msg.data[2];
                     if (cmd >= 144 && cmd <= 159 && vel > 0) { activeNotes.add(note); draw(); }
                     else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { activeNotes.delete(note); draw(); }
