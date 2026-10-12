@@ -10,10 +10,10 @@
         select { padding: 8px; font-size: 15px; border-radius: 5px; }
         #output { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .legend { margin: 10px 0; background: #e8ecef; padding: 10px; font-size: 13px; border-radius: 5px; text-align: left; }
-        #midi-status-bar { margin-top: auto; width: 100%; max-width: 500px; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; box-sizing: border-box; border: 2px solid #ccc; }
-        .midi-prompt { background: #ffeaa7; color: #d35400; border-color: #f39c12 !important; cursor: pointer; }
-        .midi-connected { background: #d4edda; color: #155724; border-color: #28a745; }
-        .midi-disconnected { background: #ffdde1; color: #c0392b; border-color: #e74c3c; }
+        #midi-status-bar { margin-top: auto; width: 100%; max-width: 500px; padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; box-sizing: border-box; border: 2px solid #2980b9; background: #ebf5fb; color: #2980b9; cursor: pointer; transition: all 0.2s ease; }
+        #midi-status-bar:hover { background: #d4e6f1; }
+        .midi-connected { background: #d4edda !important; color: #155724 !important; border-color: #28a745 !important; cursor: default !important; }
+        .midi-disconnected { background: #ffdde1 !important; color: #c0392b !important; border-color: #e74c3c !important; cursor: default !important; }
     </style>
 </head>
 <body>
@@ -30,13 +30,14 @@
     </div>
     <div id="output"></div>
     <div class="legend"><strong>Klawiatura:</strong> Białe: A do J | Czarne: W, E, T, Y, U</div>
-    <div id="midi-status-bar">Inicjalizacja systemu MIDI...</div>
+    
+    <!-- Gwarantowany panel aktywacji dla każdego systemu operacyjnego -->
+    <div id="midi-status-bar" onclick="initMIDI()">🎹 Kliknij tutaj, aby połączyć i uruchomić MIDI</div>
 
     <script>
         const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = Vex.Flow;
         let activeNotes = new Set(), noteMap = {}, currentKey = "C", gAccess = null;
         const keyMap = { 'z':48,'x':50,'c':52,'v':53,'b':55,'n':57,'m':59,'a':60,'w':61,'s':62,'e':63,'d':64,'f':65,'t':66,'g':67,'y':68,'h':69,'u':70,'j':71,'k':72 };
-        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
         
         function setNotes(key) {
             noteMap = {}; const flats = ["F","Bb","Eb","Ab","Db","Gb"];
@@ -85,34 +86,37 @@
         function updateBar(access) {
             const bar = document.getElementById("midi-status-bar");
             const inputs = Array.from(access.inputs.values());
-            bar.onclick = null;
             if (inputs.length > 0) {
                 let devName = inputs[0].name || "Urządzenie MIDI";
-                bar.innerText = `🟢 Połączono: ${devName}`; bar.className = "midi-connected";
+                bar.innerText = `🟢 Połączono z: ${devName}`; bar.className = "midi-connected";
+                bar.onclick = null; // Blokada ponownego klikania po sukcesie
                 inputs.forEach(input => input.onmidimessage = (msg) => {
                     let cmd = msg.data[0], note = msg.data[1], vel = msg.data[2];
                     if (cmd >= 144 && cmd <= 159 && vel > 0) { activeNotes.add(note); draw(); }
                     else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { activeNotes.delete(note); draw(); }
                 });
-            } else { bar.innerText = "🔴 Oczekiwanie na urządzenie MIDI..."; bar.className = "midi-disconnected"; }
+            } else { 
+                bar.innerText = "🔴 Brak urządzeń. Włącz pianino i kliknij ponownie."; 
+                bar.className = "midi-disconnected"; 
+            }
         }
 
         function initMIDI() {
+            const bar = document.getElementById("midi-status-bar");
+            bar.innerText = "⏳ Łączenie z systemem MIDI...";
+            
             if (navigator.requestMIDIAccess) {
                 navigator.requestMIDIAccess().then(access => {
                     gAccess = access; updateBar(access);
                     access.onstatechange = () => updateBar(gAccess);
-                }).catch(() => { document.getElementById("midi-status-bar").className = "midi-disconnected"; document.getElementById("midi-status-bar").innerText = "🔴 Brak uprawnień do MIDI."; });
-            } else { document.getElementById("midi-status-bar").innerText = "🔴 Przeglądarka nie obsługuje MIDI."; }
-        }
-
-        const bar = document.getElementById("midi-status-bar");
-        if (isMobile) {
-            bar.innerText = "⚠️ Mobilny Android/iOS: Kliknij tutaj, aby połączyć MIDI";
-            bar.className = "midi-prompt";
-            bar.onclick = initMIDI;
-        } else {
-            initMIDI(); // Automatyczny start dla Windowsa i systemów stacjonarnych
+                }).catch((err) => { 
+                    bar.className = "midi-disconnected"; 
+                    bar.innerText = "🔴 Odrzucono uprawnienia lub błąd: " + err.message; 
+                });
+            } else { 
+                bar.className = "midi-disconnected";
+                bar.innerText = "🔴 Ta przeglądarka nie obsługuje systemów Web MIDI API."; 
+            }
         }
     </script>
 </body>
