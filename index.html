@@ -2,23 +2,24 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Wizualizacja MIDI - Pełne Znaki</title>
+    <title>Wizualizacja MIDI - Pełna Automatyzacja</title>
     <script src="vexflow-min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; text-align: center; }
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 94vh; }
+        h1 { color: #2c3e50; margin-bottom: 5px; }
         .controls { margin-bottom: 15px; display: flex; justify-content: center; gap: 15px; align-items: center; flex-wrap: wrap; }
-        #start-btn { padding: 10px 20px; font-size: 16px; cursor: pointer; font-weight: bold; background-color: #3498db; color: white; border: none; border-radius: 5px; }
-        #start-btn:hover { background-color: #2980b9; }
         select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; background: white; cursor: pointer; }
-        #output { margin-top: 20px; background: white; padding: 20px; border-radius: 10px; display: inline-block; }
-        .legend { margin-top: 20px; background: #e8ecef; padding: 15px; display: inline-block; text-align: left; line-height: 1.5; }
+        #output { margin-top: 10px; background: white; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .legend { margin-top: 15px; background: #e8ecef; padding: 15px; display: inline-block; text-align: left; line-height: 1.5; font-size: 14px; border-radius: 5px; }
+        #midi-status-bar { margin-top: auto; width: 100%; max-width: 550px; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; text-align: center; transition: all 0.3s ease; box-sizing: border-box; }
+        .midi-disconnected { background-color: #ffdde1; color: #c0392b; border: 2px solid #e74c3c; }
+        .midi-connected { background-color: #d4edda; color: #155724; border: 2px solid #28a745; }
     </style>
 </head>
 <body>
-    <h1>Wizualizacja MIDI - Znaki przy Kluczu i przy Nutach</h1>
+    <h1>Wizualizacja MIDI</h1>
     
     <div class="controls">
-        <button id="start-btn">Uruchom system MIDI</button>
         <label for="key-select"><strong>Tonacja utworu:</strong></label>
         <select id="key-select">
             <option value="C">C-dur / a-moll (Brak znaków)</option>
@@ -43,12 +44,14 @@
         </select>
     </div>
 
-    <br><div id="output"></div><br>
+    <div id="output"></div>
     
     <div class="legend">
-        <strong>Symulator (sekcja środkowa):</strong><br>
+        <strong>Symulator (sekcja środkowa):</strong> Kliknij na tło strony i graj klawiszami komputera LUB podłącz pianino.<br>
         Białe: <code>A</code> <code>S</code> <code>D</code> <code>F</code> <code>G</code> <code>H</code> <code>J</code> | Czarne: <code>W</code> <code>E</code> <code>T</code> <code>Y</code> <code>U</code>
     </div>
+
+    <div id="midi-status-bar" class="midi-disconnected">Oczekiwanie na urządzenie MIDI...</div>
 
     <script>
         const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = Vex.Flow;
@@ -79,25 +82,16 @@
         function generateNoteMap(keySignature) {
             noteMap = {};
             let baseNames = keyConfigurations[keySignature] || keyConfigurations['C'];
-            
             for (let i = 21; i <= 108; i++) {
                 const noteIndex = i % 12;
                 let octave = Math.floor(i / 12) - 1;
                 let fullName = baseNames[noteIndex];
-                
                 let hasSharp = fullName.includes("#");
                 let hasFlat = fullName.includes("|b");
                 if (hasFlat) fullName = fullName.replace("|b", "b");
-                
-                // POPRAWKA: Znaki przygodne są teraz zawsze widoczne dla każdego czarnego klawisza
-                noteMap[i] = { 
-                    key: `${fullName}/${octave}`, 
-                    accSharp: hasSharp,
-                    accFlat: hasFlat
-                };
+                noteMap[i] = { key: `${fullName}/${octave}`, accSharp: hasSharp, accFlat: hasFlat };
             }
         }
-
         generateNoteMap('C');
 
         const div = document.getElementById("output");
@@ -106,12 +100,10 @@
 
         function draw() {
             context.clear();
-            
             const tStave = new Stave(20, 120, 450).addClef("treble").addKeySignature(currentKey).setContext(context).draw();
             const bStave = new Stave(20, 280, 450).addClef("bass").addKeySignature(currentKey).setContext(context).draw();
             
             let tNotes = [], bNotes = [];
-            
             Array.from(activeNotes).sort((a,b)=>a-b).forEach(id => {
                 if (noteMap[id]) {
                     if (id >= 60) tNotes.push(noteMap[id]); else bNotes.push(noteMap[id]);
@@ -150,22 +142,49 @@
         window.addEventListener('keydown', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]&&!activeNotes.has(keyMap[k])){ activeNotes.add(keyMap[k]); draw(); } });
         window.addEventListener('keyup', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]){ activeNotes.delete(keyMap[k]); draw(); } });
         
-        document.getElementById("start-btn").addEventListener("click", () => {
-            if (navigator.requestMIDIAccess) {
-                navigator.requestMIDIAccess().then(access => {
-                    alert("System MIDI uruchomiony pomyślnie!");
-                    for (let input of access.inputs.values()) {
-                        input.onmidimessage = (msg) => {
-                            const cmd = msg.data;
-                            const note = msg.data;
-                            const vel = msg.data;
-                            if ((cmd >= 144 && cmd <= 159) && vel > 0) { activeNotes.add(note); draw(); }
-                            else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { activeNotes.delete(note); draw(); }
-                        };
-                    }
+        function updateMidiStatus(midiAccess) {
+            const statusBar = document.getElementById("midi-status-bar");
+            const inputs = Array.from(midiAccess.inputs.values());
+            
+            if (inputs.length > 0) {
+                const deviceName = inputs[0].name || "Urządzenie MIDI";
+                statusBar.innerText = `🟢 Połączono z: ${deviceName}`;
+                statusBar.className = "midi-connected";
+                
+                inputs.forEach(input => {
+                    input.onmidimessage = handleMidiMessage;
                 });
+            } else {
+                statusBar.innerText = "🔴 Oczekiwanie na urządzenie MIDI...";
+                statusBar.className = "midi-disconnected";
             }
-        });
+        }
+
+        function handleMidiMessage(msg) {
+            const cmd = msg.data[0];
+            const note = msg.data[1];
+            const vel = msg.data[2];
+            
+            if (cmd >= 144 && cmd <= 159 && vel > 0) { 
+                activeNotes.add(note); 
+                draw(); 
+            }
+            else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { 
+                activeNotes.delete(note); 
+                draw(); 
+            }
+        }
+
+        if (navigator.requestMIDIAccess) {
+            navigator.requestMIDIAccess().then(access => {
+                updateMidiStatus(access);
+                access.onstatechange = () => { updateMidiStatus(access); };
+            }).catch(() => {
+                document.getElementById("midi-status-bar").innerText = "🔴 Błąd: Brak uprawnień do MIDI.";
+            });
+        } else {
+            document.getElementById("midi-status-bar").innerText = "🔴 Przeglądarka nie obsługuje MIDI.";
+        }
     </script>
 </body>
 </html>
