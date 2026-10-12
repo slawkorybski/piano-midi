@@ -2,77 +2,96 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Wizualizacja MIDI 88 Klawiszy</title>
-    <!-- Ładowanie pliku z Twojego folderu na GitHubie -->
+    <title>Wizualizacja MIDI - 88 Klawiszy & Krzyżyki</title>
     <script src="vexflow-min.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; text-align: center; }
         #start-btn { padding: 10px 20px; font-size: 16px; cursor: pointer; }
         #output { margin-top: 20px; background: white; padding: 20px; border-radius: 10px; display: inline-block; }
-        .legend { margin-top: 20px; background: #e8ecef; padding: 15px; display: inline-block; text-align: left; }
+        .legend { margin-top: 20px; background: #e8ecef; padding: 15px; display: inline-block; text-align: left; line-height: 1.5; }
     </style>
 </head>
 <body>
-    <h1>Wizualizacja MIDI - Pełne 88 Klawiszy</h1>
+    <h1>Wizualizacja MIDI - 88 Klawiszy & Krzyżyki</h1>
     <button id="start-btn">Uruchom system MIDI</button>
     <br><div id="output"></div><br>
     <div class="legend">
-        <strong>Symulator klawiatury komputerowej (nadal działa dla środkowej sekcji):</strong><br>
-        Klucz Basowy: <code>Z</code> <code>X</code> <code>C</code> <code>V</code> <code>B</code> <code>N</code> <code>M</code><br>
-        Klucz Wiolinowy: <code>A</code> <code>S</code> <code>D</code> <code>F</code> <code>G</code> <code>H</code> <code>J</code> <code>K</code> <code>L</code>
+        <strong>Klawisze komputera (sekcja środkowa):</strong><br>
+        Białe klawisze: <code>A</code>=C4 (środkowe C), <code>S</code>=D4, <code>D</code>=E4, <code>F</code>=F4, <code>G</code>=G4, <code>H</code>=A4, <code>J</code>=B4<br>
+        Czarne klawisze: <code>W</code>=C#4, <code>E</code>=D#4, <code>T</code>=F#4, <code>Y</code>=G#4, <code>U</code>=A#4
     </div>
     <script>
-        const { Renderer, Stave, StaveNote, Voice, Formatter } = Vex.Flow;
+        const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = Vex.Flow;
         let activeNotes = new Set();
         
-        // Symulator klawiatury komputerowej
-        const keyMap = { 'z':48,'x':50,'c':52,'v':53,'b':55,'n':57,'m':59,'a':60,'s':62,'d':64,'f':65,'g':67,'h':69,'j':71,'k':72,'l':74 };
+        // Mapowanie klawiatury komputerowej do testów
+        const keyMap = { 
+            'z':48, 'x':50, 'c':52, 'v':53, 'b':55, 'n':57, 'm':59,
+            'a':60, 'w':61, 's':62, 'e':63, 'd':64, 'f':65, 't':66, 'g':67, 'y':68, 'h':69, 'u':70, 'j':71, 'k':72, 'l':74 
+        };
 
-        // GENEROWANIE MAPY DLA WSZYSTKICH 88 KLAWISZY (Od MIDI 21 do 108)
-        const noteNames = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
-        const noteMap = {};
-        for (let i = 21; i <= 108; i++) {
-            let noteIndex = i % 12;
-            let octave = Math.floor(i / 12) - 1;
-            let name = noteNames[noteIndex];
-            // VexFlow nie obsługuje natywnie czarnych klawiszy w prostym rysowaniu akordów, 
-            // dlatego dla uproszczenia wizualnego mapujemy je na białe sąsiednie klawisze
-            if ([1,3,6,8,10].includes(noteIndex)) {
-                noteIndex = (noteIndex + 1) % 12;
-                if (noteIndex === 0) octave++;
-                name = noteNames[noteIndex];
-            }
-            noteMap[i] = [`${name}/${octave}`];
-        }
+        // PEŁNA MAPA 88 KLAWISZY PIANINA
+        const noteMap = {
+            21: ["A/0", false], 22: ["A#/0", true], 23: ["B/0", false],
+            24: ["C/1", false], 25: ["C#/1", true], 26: ["D/1", false], 27: ["D#/1", true], 28: ["E/1", false], 29: ["F/1", false], 30: ["F#/1", true], 31: ["G/1", false], 32: ["G#/1", true], 33: ["A/1", false], 34: ["A#/1", true], 35: ["B/1", false],
+            36: ["C/2", false], 37: ["C#/2", true], 38: ["D/2", false], 39: ["D#/2", true], 40: ["E/2", false], 41: ["F/2", false], 42: ["F#/2", true], 43: ["G/2", false], 44: ["G#/2", true], 45: ["A/2", false], 46: ["A#/2", true], 47: ["B/2", false],
+            48: ["C/3", false], 49: ["C#/3", true], 50: ["D/3", false], 51: ["D#/3", true], 52: ["E/3", false], 53: ["F/3", false], 54: ["F#/3", true], 55: ["G/3", false], 56: ["G#/3", true], 57: ["A/3", false], 58: ["A#/3", true], 59: ["B/3", false],
+            60: ["C/4", false], 61: ["C#/4", true], 62: ["D/4", false], 63: ["D#/4", true], 64: ["E/4", false], 65: ["F/4", false], 66: ["F#/4", true], 67: ["G/4", false], 68: ["G#/4", true], 69: ["A/4", false], 70: ["A#/4", true], 71: ["B/4", false],
+            72: ["C/5", false], 73: ["C#/5", true], 74: ["D/5", false], 75: ["D#/5", true], 76: ["E/5", false], 77: ["F/5", false], 78: ["F#/5", true], 79: ["G/5", false], 80: ["G#/5", true], 81: ["A/5", false], 82: ["A#/5", true], 83: ["B/5", false],
+            84: ["C/6", false], 85: ["C#/6", true], 86: ["D/6", false], 87: ["D#/6", true], 88: ["E/6", false], 89: ["F/6", false], 90: ["F#/6", true], 91: ["G/6", false], 92: ["G#/6", true], 93: ["A/6", false], 94: ["A#/6", true], 95: ["B/6", false],
+            96: ["C/7", false], 97: ["C#/7", true], 98: ["D/7", false], 99: ["D#/7", true], 100: ["E/7", false], 101: ["F/7", false], 102: ["F#/7", true], 103: ["G/7", false], 104: ["G#/7", true], 105: ["A/7", false], 106: ["A#/7", true], 107: ["B/7", false],
+            108: ["C/8", false]
+        };
 
         const div = document.getElementById("output");
-        const renderer = new Renderer(div, Renderer.Backends.SVG).resize(550, 320);
+        const renderer = new Renderer(div, Renderer.Backends.SVG).resize(500, 320);
         const context = renderer.getContext();
 
         function draw() {
             context.clear();
-            const tStave = new Stave(20, 30, 450).addClef("treble").setContext(context).draw();
-            const bStave = new Stave(20, 170, 450).addClef("bass").setContext(context).draw();
-            let tNotes = [], bNotes = [];
+            const tStave = new Stave(20, 30, 420).addClef("treble").setContext(context).draw();
+            const bStave = new Stave(20, 160, 420).addClef("bass").setContext(context).draw();
             
+            let tNotesData = [], bNotesData = [];
+            
+            // Sortowanie wciśniętych dźwięków od najniższego do najwyższego
             Array.from(activeNotes).sort((a,b)=>a-b).forEach(id => {
                 if (noteMap[id]) {
-                    // Granica podziału na klucze: od środkowego C (MIDI 60) w górę dajemy klucz wiolinowy
-                    if (id >= 60) tNotes.push(noteMap[id][0]); else bNotes.push(noteMap[id][0]);
+                    const [key, hasAcc] = noteMap[id];
+                    if (id >= 60) {
+                        tNotesData.push({ key, hasAcc });
+                    } else {
+                        bNotesData.push({ key, hasAcc });
+                    }
                 }
             });
-            
-            if (tNotes.length > 0) {
-                const v = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([new StaveNote({ clef:"treble", keys:tNotes, duration:"w" })]);
-                new Formatter().joinVoices([v]).format([v], 400); v.draw(context, tStave);
+
+            // Rysowanie klucza wiolinowego
+            if (tNotesData.length > 0) {
+                const staveNote = new StaveNote({ clef: "treble", keys: tNotesData.map(n => n.key), duration: "w" });
+                tNotesData.forEach((n, index) => {
+                    // POPRAWKA: indeks podawany jako pierwszy argument metody addModifier
+                    if (n.hasAcc) staveNote.addModifier(index, new Accidental("#"));
+                });
+                const v = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables([staveNote]);
+                new Formatter().joinVoices([v]).format([v], 360); 
+                v.draw(context, tStave);
             }
-            if (bNotes.length > 0) {
-                const v = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([new StaveNote({ clef:"bass", keys:bNotes, duration:"w" })]);
-                new Formatter().joinVoices([v]).format([v], 400); v.draw(context, bStave);
+
+            // Rysowanie klucza basowego
+            if (bNotesData.length > 0) {
+                const staveNote = new StaveNote({ clef: "bass", keys: bNotesData.map(n => n.key), duration: "w" });
+                bNotesData.forEach((n, index) => {
+                    // POPRAWKA: indeks podawany jako pierwszy argument metody addModifier
+                    if (n.hasAcc) staveNote.addModifier(index, new Accidental("#"));
+                });
+                const v = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables([staveNote]);
+                new Formatter().joinVoices([v]).format([v], 360); 
+                v.draw(context, bStave);
             }
         }
         draw();
-        
+
         window.addEventListener('keydown', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]&&!activeNotes.has(keyMap[k])){ activeNotes.add(keyMap[k]); draw(); } });
         window.addEventListener('keyup', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]){ activeNotes.delete(keyMap[k]); draw(); } });
         
@@ -81,9 +100,11 @@
                 navigator.requestMIDIAccess().then(access => {
                     for (let input of access.inputs.values()) {
                         input.onmidimessage = (msg) => {
-                            const cmd=msg.data[0], note=msg.data[1], vel=msg.data[2];
-                            if((cmd===144||cmd===153)&&vel>0){ activeNotes.add(note); draw(); }
-                            else if(cmd===128||cmd===137||((cmd===144||cmd===153)&&vel===0)){ activeNotes.delete(note); draw(); }
+                            const cmd = msg.data;
+                            const note = msg.data;
+                            const vel = msg.data.length > 2 ? msg.data : 0;
+                            if ((cmd === 144 || cmd === 153) && vel > 0) { activeNotes.add(note); draw(); }
+                            else if (cmd === 128 || cmd === 137 || ((cmd === 144 || cmd === 153) && vel === 0)) { activeNotes.delete(note); draw(); }
                         };
                     }
                 });
