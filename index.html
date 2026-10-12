@@ -6,7 +6,8 @@
     <script src="vexflow-min.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; text-align: center; }
-        #start-btn { padding: 10px 20px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        #start-btn { padding: 10px 20px; font-size: 16px; cursor: pointer; font-weight: bold; background-color: #3498db; color: white; border: none; border-radius: 5px; }
+        #start-btn:hover { background-color: #2980b9; }
         #output { margin-top: 20px; background: white; padding: 20px; border-radius: 10px; display: inline-block; }
         .legend { margin-top: 20px; background: #e8ecef; padding: 15px; display: inline-block; text-align: left; line-height: 1.5; }
     </style>
@@ -25,7 +26,7 @@
         
         const keyMap = { 'z':48,'x':50,'c':52,'v':53,'b':55,'n':57,'m':59,'a':60,'w':61,'s':62,'e':63,'d':64,'f':65,'t':66,'g':67,'y':68,'h':69,'u':70,'j':71,'k':72 };
 
-        // BEZBŁĘDNA MAPA DLA WSZYSTKICH 88 KLAWISZY (MIDI 21 - 108) WRAZ Z PÓŁTONAMI
+        // GENEROWANIE MAPY DLA WSZYSTKICH 88 KLAWISZY (MIDI 21 - 108)
         const baseNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         const noteMap = {};
         for (let i = 21; i <= 108; i++) {
@@ -36,14 +37,12 @@
             noteMap[i] = { key: `${fullName}/${octave}`, acc: hasAccidental };
         }
 
-        // Zwiększony rozmiar pionowy (500px), aby skrajne górne i dolne nuty mieściły się w oknie
         const div = document.getElementById("output");
         const renderer = new Renderer(div, Renderer.Backends.SVG).resize(550, 500);
         const context = renderer.getContext();
 
         function draw() {
             context.clear();
-            // Obniżona pozycja Y pięciolinii (klucz wiolinowy na 120px, basowy na 280px), dająca miejsce na wysokie dźwięki
             const tStave = new Stave(20, 120, 450).addClef("treble").setContext(context).draw();
             const bStave = new Stave(20, 280, 450).addClef("bass").setContext(context).draw();
             
@@ -83,11 +82,23 @@
         document.getElementById("start-btn").addEventListener("click", () => {
             if (navigator.requestMIDIAccess) {
                 navigator.requestMIDIAccess().then(access => {
+                    alert("System MIDI uruchomiony pomyślnie!");
                     for (let input of access.inputs.values()) {
                         input.onmidimessage = (msg) => {
-                            const cmd=msg.data, note=msg.data, vel=msg.data;
-                            if((cmd===144||cmd===153)&&vel>0){ activeNotes.add(note); draw(); }
-                            else if(cmd===128||cmd===137||((cmd===144||cmd===153)&&vel===0)){ activeNotes.delete(note); draw(); }
+                            const cmd = msg.data[0];
+                            const note = msg.data[1];
+                            const vel = msg.data[2];
+                            
+                            // Obsługa Note On (wciśnięcie klawisza) - kanały 0-15 (144 do 159)
+                            if (cmd >= 144 && cmd <= 159 && vel > 0) { 
+                                activeNotes.add(note); 
+                                draw(); 
+                            }
+                            // Obsługa Note Off (puszczenie klawisza) - kanały 0-15 (128 do 143 lub Note On z velocity 0)
+                            else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { 
+                                activeNotes.delete(note); 
+                                draw(); 
+                            }
                         };
                     }
                 });
