@@ -2,188 +2,109 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Wizualizacja MIDI - Pełna Automatyzacja</title>
+    <title>Wizualizacja MIDI</title>
     <script src="vexflow-min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 94vh; }
-        h1 { color: #2c3e50; margin-bottom: 5px; }
-        .controls { margin-bottom: 15px; display: flex; justify-content: center; gap: 15px; align-items: center; flex-wrap: wrap; }
-        select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; background: white; cursor: pointer; }
-        #output { margin-top: 10px; background: white; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .legend { margin-top: 15px; background: #e8ecef; padding: 15px; display: inline-block; text-align: left; line-height: 1.5; font-size: 14px; border-radius: 5px; }
-        #midi-status-bar { margin-top: auto; width: 100%; max-width: 550px; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; text-align: center; transition: all 0.3s ease; box-sizing: border-box; }
-        .midi-disconnected { background-color: #ffdde1; color: #c0392b; border: 2px solid #e74c3c; }
-        .midi-connected { background-color: #d4edda; color: #155724; border: 2px solid #28a745; }
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 94vh; }
+        .controls { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
+        select { padding: 8px; font-size: 15px; border-radius: 5px; }
+        #output { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .legend { margin: 10px 0; background: #e8ecef; padding: 10px; font-size: 13px; border-radius: 5px; text-align: left; }
+        #midi-status-bar { margin-top: auto; width: 100%; max-width: 500px; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; cursor: pointer; border: 2px solid #f39c12; background: #ffeaa7; color: #d35400; }
+        .midi-connected { background: #d4edda !important; color: #155724 !important; border-color: #28a745 !important; }
+        .midi-disconnected { background: #ffdde1 !important; color: #c0392b !important; border-color: #e74c3c !important; }
     </style>
 </head>
 <body>
-    <h1>Wizualizacja MIDI</h1>
-    
+    <h3>Wizualizacja MIDI</h3>
     <div class="controls">
-        <label for="key-select"><strong>Tonacja utworu:</strong></label>
+        <label for="key-select"><strong>Tonacja:</strong></label>
         <select id="key-select">
-            <option value="C">C-dur / a-moll (Brak znaków)</option>
-            <optgroup label="Tonacje Krzyżykowe (♯)">
-                <option value="G">G-dur / e-moll (1 krzyżyk: F#)</option>
-                <option value="D">D-dur / b-moll (2 krzyżyki: F#, C#)</option>
-                <option value="A">A-dur / f#-moll (3 krzyżyki: F#, C#, G#)</option>
-                <option value="E">E-dur / c#-moll (4 krzyżyki: F#, C#, G#, D#)</option>
-                <option value="B">B-dur / g#-moll (5 krzyżyków: F#, C#, G#, D#, A#)</option>
-                <option value="F#">F#-dur / d#-moll (6 krzyżyków: F#, C#, G#, D#, A#, E#)</option>
-                <option value="C#">C#-dur / a#-moll (7 krzyżyków: F#, C#, G#, D#, A#, E#, B#)</option>
-            </optgroup>
-            <optgroup label="Tonacje Bemolowe (♭)">
-                <option value="F">F-dur / d-moll (1 bemol: Bb)</option>
-                <option value="Bb">B-dur / g-moll (2 bemole: Bb, Eb)</option>
-                <option value="Eb">Es-dur / c-moll (3 bemole: Bb, Eb, Ab)</option>
-                <option value="Ab">As-dur / f-moll (4 bemole: Bb, Eb, Ab, Db)</option>
-                <option value="Db">Des-dur / b-moll (5 bemoli: Bb, Eb, Ab, Db, Gb)</option>
-                <option value="Gb">Ges-dur / es-moll (6 bemoli: Bb, Eb, Ab, Db, Gb, Cb)</option>
-                <option value="Cb">Ces-dur / as-moll (7 bemoli: Bb, Eb, Ab, Db, Gb, Cb, Fb)</option>
-            </optgroup>
+            <option value="C">C-dur / a-moll</option>
+            <option value="G">G-dur (1♯)</option><option value="D">D-dur (2♯)</option><option value="A">A-dur (3♯)</option>
+            <option value="E">E-dur (4♯)</option><option value="B">B-dur (5♯)</option><option value="F#">F#-dur (6♯)</option>
+            <option value="F">F-dur (1♭)</option><option value="Bb">B-dur (2♭)</option><option value="Eb">Es-dur (3♭)</option>
+            <option value="Ab">As-dur (4♭)</option><option value="Db">Des-dur (5♭)</option><option value="Gb">Ges-dur (6♭)</option>
         </select>
     </div>
-
     <div id="output"></div>
-    
-    <div class="legend">
-        <strong>Symulator (sekcja środkowa):</strong> Kliknij na tło strony i graj klawiszami komputera LUB podłącz pianino.<br>
-        Białe: <code>A</code> <code>S</code> <code>D</code> <code>F</code> <code>G</code> <code>H</code> <code>J</code> | Czarne: <code>W</code> <code>E</code> <code>T</code> <code>Y</code> <code>U</code>
-    </div>
-
-    <div id="midi-status-bar" class="midi-disconnected">Oczekiwanie na urządzenie MIDI...</div>
+    <div class="legend"><strong>Klawiatura:</strong> Białe: A do J | Czarne: W, E, T, Y, U</div>
+    <div id="midi-status-bar" onclick="connectMIDI()">⚠️ Android: Kliknij tutaj, aby połączyć MIDI</div>
 
     <script>
         const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = Vex.Flow;
-        let activeNotes = new Set();
-        let noteMap = {};
-        let currentKey = "C";
-        
+        let activeNotes = new Set(), noteMap = {}, currentKey = "C", gAccess = null;
         const keyMap = { 'z':48,'x':50,'c':52,'v':53,'b':55,'n':57,'m':59,'a':60,'w':61,'s':62,'e':63,'d':64,'f':65,'t':66,'g':67,'y':68,'h':69,'u':70,'j':71,'k':72 };
-
-        const keyConfigurations = {
-            'C':  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'G':  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'D':  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'A':  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'E':  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'B':  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'F#': ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'C#': ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            'F':  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "B|b", "B"],
-            'Bb': ["C", "C#", "D", "E|b", "E", "F", "F#", "G", "G#", "A", "B|b", "B"],
-            'Eb': ["C", "C#", "D", "E|b", "E", "F", "F#", "G", "A|b", "A", "B|b", "B"],
-            'Ab': ["C", "D|b", "D", "E|b", "E", "F", "F#", "G", "A|b", "A", "B|b", "B"],
-            'Db': ["C", "D|b", "D", "E|b", "E", "F", "G|b", "G", "A|b", "A", "B|b", "B"],
-            'Gb': ["C", "D|b", "D", "E|b", "E", "F", "G|b", "G", "A|b", "A", "B|b", "C|b"],
-            'Cb': ["D|b", "D|b", "D", "E|b", "F|b", "F", "G|b", "G", "A|b", "A", "B|b", "C|b"]
-        };
-
-        function generateNoteMap(keySignature) {
+        
+        // Automatyczne generowanie reguł dla czarnych klawiszy na podstawie teorii muzyki
+        function setNotes(key) {
             noteMap = {};
-            let baseNames = keyConfigurations[keySignature] || keyConfigurations['C'];
+            const sharps = ["G","D","A","E","B","F#"], flats = ["F","Bb","Eb","Ab","Db","Gb"];
+            const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+            if (flats.includes(key)) {
+                names[1]="Db"; names[3]="Eb"; names[8]="Ab"; names[10]="Bb";
+                if(key==="Db"||key==="Gb") names[6]="Gb";
+            }
             for (let i = 21; i <= 108; i++) {
-                const noteIndex = i % 12;
-                let octave = Math.floor(i / 12) - 1;
-                let fullName = baseNames[noteIndex];
-                let hasSharp = fullName.includes("#");
-                let hasFlat = fullName.includes("|b");
-                if (hasFlat) fullName = fullName.replace("|b", "b");
-                noteMap[i] = { key: `${fullName}/${octave}`, accSharp: hasSharp, accFlat: hasFlat };
+                let name = names[i % 12], oct = Math.floor(i / 12) - 1;
+                noteMap[i] = { key: `${name}/${oct}`, sharp: name.includes("#"), flat: name.includes("b") };
             }
         }
-        generateNoteMap('C');
+        setNotes("C");
 
         const div = document.getElementById("output");
-        const renderer = new Renderer(div, Renderer.Backends.SVG).resize(550, 500);
-        const context = renderer.getContext();
+        const renderer = new Renderer(div, Renderer.Backends.SVG).resize(520, 420);
+        const ctx = renderer.getContext();
 
         function draw() {
-            context.clear();
-            const tStave = new Stave(20, 120, 450).addClef("treble").addKeySignature(currentKey).setContext(context).draw();
-            const bStave = new Stave(20, 280, 450).addClef("bass").addKeySignature(currentKey).setContext(context).draw();
-            
-            let tNotes = [], bNotes = [];
+            ctx.clear();
+            const tStave = new Stave(10, 60, 480).addClef("treble").addKeySignature(currentKey).setContext(ctx).draw();
+            const bStave = new Stave(10, 220, 480).addClef("bass").addKeySignature(currentKey).setContext(ctx).draw();
+            let tN = [], bN = [];
             Array.from(activeNotes).sort((a,b)=>a-b).forEach(id => {
-                if (noteMap[id]) {
-                    if (id >= 60) tNotes.push(noteMap[id]); else bNotes.push(noteMap[id]);
-                }
+                if (noteMap[id]) { if (id >= 60) tN.push(noteMap[id]); else bN.push(noteMap[id]); }
             });
-
-            if (tNotes.length > 0) {
-                const sn = new StaveNote({ clef: "treble", keys: tNotes.map(n => n.key), duration: "w" });
-                tNotes.forEach((n, idx) => {
-                    if (n.accSharp) sn.addModifier(idx, new Accidental("#"));
-                    if (n.accFlat) sn.addModifier(idx, new Accidental("b"));
-                });
+            if (tN.length > 0) {
+                const sn = new StaveNote({ clef: "treble", keys: tN.map(n => n.key), duration: "w" });
+                tN.forEach((n, i) => { if(n.sharp) sn.addModifier(i, new Accidental("#")); if(n.flat) sn.addModifier(i, new Accidental("b")); });
                 const v = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([sn]);
-                new Formatter().joinVoices([v]).format([v], 310); v.draw(context, tStave);
+                new Formatter().joinVoices([v]).format([v], 320); v.draw(ctx, tStave);
             }
-
-            if (bNotes.length > 0) {
-                const sn = new StaveNote({ clef: "bass", keys: bNotes.map(n => n.key), duration: "w" });
-                bNotes.forEach((n, idx) => {
-                    if (n.accSharp) sn.addModifier(idx, new Accidental("#"));
-                    if (n.accFlat) sn.addModifier(idx, new Accidental("b"));
-                });
+            if (bN.length > 0) {
+                const sn = new StaveNote({ clef: "bass", keys: bN.map(n => n.key), duration: "w" });
+                bN.forEach((n, i) => { if(n.sharp) sn.addModifier(i, new Accidental("#")); if(n.flat) sn.addModifier(i, new Accidental("b")); });
                 const v = new Voice({ num_beats:4, beat_value:4 }).setMode(Voice.Mode.SOFT).addTickables([sn]);
-                new Formatter().joinVoices([v]).format([v], 310); v.draw(context, bStave);
+                new Formatter().joinVoices([v]).format([v], 320); v.draw(ctx, bStave);
             }
         }
         draw();
 
         document.getElementById("key-select").addEventListener("change", (e) => {
-            currentKey = e.target.value;
-            generateNoteMap(currentKey);
-            draw();
-            e.target.blur();
+            currentKey = e.target.value; setNotes(currentKey); draw(); e.target.blur();
         });
-        
-        window.addEventListener('keydown', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]&&!activeNotes.has(keyMap[k])){ activeNotes.add(keyMap[k]); draw(); } });
-        window.addEventListener('keyup', (e) => { const k=e.key.toLowerCase(); if(keyMap[k]){ activeNotes.delete(keyMap[k]); draw(); } });
-        
-        function updateMidiStatus(midiAccess) {
-            const statusBar = document.getElementById("midi-status-bar");
-            const inputs = Array.from(midiAccess.inputs.values());
-            
+        window.addEventListener('keydown', (e) => { let k=e.key.toLowerCase(); if(keyMap[k]&&!activeNotes.has(keyMap[k])){ activeNotes.add(keyMap[k]); draw(); } });
+        window.addEventListener('keyup', (e) => { let k=e.key.toLowerCase(); if(keyMap[k]){ activeNotes.delete(keyMap[k]); draw(); } });
+
+        function updateBar(access) {
+            const bar = document.getElementById("midi-status-bar");
+            const inputs = Array.from(access.inputs.values());
             if (inputs.length > 0) {
-                const deviceName = inputs[0].name || "Urządzenie MIDI";
-                statusBar.innerText = `🟢 Połączono z: ${deviceName}`;
-                statusBar.className = "midi-connected";
-                
-                inputs.forEach(input => {
-                    input.onmidimessage = handleMidiMessage;
+                bar.innerText = `🟢 Połączono: ${inputs[0].name}`; bar.className = "midi-connected";
+                inputs.forEach(input => input.onmidimessage = (msg) => {
+                    let cmd = msg.data[0], note = msg.data[1], vel = msg.data[2];
+                    if (cmd >= 144 && cmd <= 159 && vel > 0) { activeNotes.add(note); draw(); }
+                    else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { activeNotes.delete(note); draw(); }
                 });
-            } else {
-                statusBar.innerText = "🔴 Oczekiwanie na urządzenie MIDI...";
-                statusBar.className = "midi-disconnected";
-            }
+            } else { bar.innerText = "🔴 Oczekiwanie na urządzenie MIDI..."; bar.className = "midi-disconnected"; }
         }
 
-        function handleMidiMessage(msg) {
-            const cmd = msg.data[0];
-            const note = msg.data[1];
-            const vel = msg.data[2];
-            
-            if (cmd >= 144 && cmd <= 159 && vel > 0) { 
-                activeNotes.add(note); 
-                draw(); 
+        function connectMIDI() {
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess().then(access => {
+                    gAccess = access; updateBar(access); bar.removeAttribute('onclick');
+                    access.onstatechange = () => updateBar(gAccess);
+                }).catch(() => { document.getElementById("midi-status-bar").innerText = "🔴 Brak uprawnień."; });
             }
-            else if ((cmd >= 128 && cmd <= 143) || (cmd >= 144 && cmd <= 159 && vel === 0)) { 
-                activeNotes.delete(note); 
-                draw(); 
-            }
-        }
-
-        if (navigator.requestMIDIAccess) {
-            navigator.requestMIDIAccess().then(access => {
-                updateMidiStatus(access);
-                access.onstatechange = () => { updateMidiStatus(access); };
-            }).catch(() => {
-                document.getElementById("midi-status-bar").innerText = "🔴 Błąd: Brak uprawnień do MIDI.";
-            });
-        } else {
-            document.getElementById("midi-status-bar").innerText = "🔴 Przeglądarka nie obsługuje MIDI.";
         }
     </script>
 </body>
